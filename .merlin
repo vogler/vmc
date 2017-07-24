@@ -1,3 +1,0 @@
-PKG angstrom batteries ppx_deriving ppx_deriving.std ppx_deriving_morphism
-S .
-B _build

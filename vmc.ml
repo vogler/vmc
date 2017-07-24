@@ -298,3 +298,6 @@ end
 module Proll = struct
 
 end
+
+let () =
+  print_endline "Usage: vmc.exe <file.c>"
