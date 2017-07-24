@@ -13,6 +13,50 @@ module type S = sig
   end
 end
 
+module Parsers = struct
+  include Angstrom
+  (* custom combinators *)
+  let from p xs = choice (List.map (fun (a,b) -> p a *> return b) xs)
+  let ( *>> ) p v = p *> return v
+  let (|>>) pa pf = pa >>= fun a -> pf >>| fun f -> f a
+  let (^^) = lift2 (^)
+  let some p = p >>| (fun x -> Some x) <|> return None
+  (* common parsers *)
+  let ws = skip_while (function '\x20' | '\x0a' | '\x0d' | '\x09' -> true | _ -> false)
+  let sws p i = ws *> p i <* ws (* we always skip whitespace... *)
+  let sws0 p = ws *> p <* ws (* for parsers w/o arguments *)
+  let char = sws char
+  let string = sws string
+  let surround a b p = char a *> p <* char b
+  let parens p = surround '(' ')' p
+  let brackets p = surround '[' ']' p
+  let curly p = surround '{' '}' p
+  let (|||) f g x = f x || g x
+  let p_digit = function '0'..'9' -> true | _ -> false
+  let p_nondigit = function 'a'..'z' | 'A'..'Z' | '_' -> true | _ -> false
+  let digit = take_while1 p_digit <?> "digit"
+  let nondigit = take_while1 p_nondigit <?> "nondigit"
+  let int = sws0 digit >>| int_of_string <?> "int"
+
+  let identifier = sws0 @@ take_while1 p_nondigit ^^ take_while (p_digit ||| p_nondigit) <?> "identifier"
+
+  let lrec hd tl = (* hd is the base case parser, tl is the left-recursive parser *)
+    hd |>> (fix (fun r -> tl (fun f -> r >>| (fun rf -> rf % f)) <|> return identity))
+
+  (* can't use let rec here... *)
+  let tie f g = fix (fun f' -> f (g f')), fix (fun g' -> g (f g'))
+
+  let parse p input = match parse_only p (`String input) with
+    | Ok v      -> v
+    | Error msg -> failwith msg
+
+  let test name p show inputs =
+    print_endline ("Parser " ^ name ^ ":");
+    let no_path s = String.nreplace s "Vmc.C.Language." "" in
+    List.iter (fun input -> print_endline (input ^ " -> " ^ try no_path (show (parse p input)) with Failure s -> "fail:" ^ s)) inputs;
+    print_endline ""
+end
+
 (* imperative: C / CMa *)
 module C = struct
   module Language = struct
@@ -65,52 +109,13 @@ module C = struct
     (* [@@deriving show {with_path = false}] *)
 
     module Parser = struct
-      open Angstrom
-      (* custom combinators *)
-      let from p xs = choice (List.map (fun (a,b) -> p a *> return b) xs)
-      let ( *>> ) p v = p *> return v
-      let (|>>) pa pf = pa >>= fun a -> pf >>| fun f -> f a
-      let (^^) = lift2 (^)
-      let some p = p >>| (fun x -> Some x) <|> return None
-      (* common parsers *)
-      let ws = skip_while (function '\x20' | '\x0a' | '\x0d' | '\x09' -> true | _ -> false)
-      let sws p i = ws *> p i <* ws (* we always skip whitespace... *)
-      let sws0 p = ws *> p <* ws (* for parsers w/o arguments *)
-      let char = sws char
-      let string = sws string
-      let surround a b p = char a *> p <* char b
-      let parens p = surround '(' ')' p
-      let brackets p = surround '[' ']' p
-      let curly p = surround '{' '}' p
-      let (|||) f g x = f x || g x
-      let p_digit = function '0'..'9' -> true | _ -> false
-      let p_nondigit = function 'a'..'z' | 'A'..'Z' | '_' -> true | _ -> false
-      let digit = take_while1 p_digit <?> "digit"
-      let nondigit = take_while1 p_nondigit <?> "nondigit"
-      let int = sws0 digit >>| int_of_string <?> "int"
-
-      let identifier = sws0 @@ take_while1 p_nondigit ^^ take_while (p_digit ||| p_nondigit) <?> "identifier"
-
-      (* let typ = *)
-      (*   string "int" *>> Int *)
-      (*   |>> fix (fun typ -> *)
-      (*       choice [ *)
-      (*         char '*' *> typ >>| (fun f -> (fun t -> f (Ptr t))); *)
-      (*         brackets int >>= (fun n -> typ >>= (fun f -> return (fun t -> f (Arr (n, t))))); *)
-      (*         return identity; *)
-      (*       ] *)
-      (*     ) *)
-
-      let lrec hd tl =
-        hd |>> (fix (fun r -> tl (fun f -> r >>| (fun rf -> rf % f)) <|> return identity))
-
+      include Parsers
       let typ = lrec
         (string "int" *>> Int)
         (fun ff -> choice [
           char '*' *> ff (fun t -> Ptr t);
           brackets int >>= (fun n -> ff (fun t -> Arr (n, t))); (* TODO array size optional if used with initializer. also, we expect the brackets after the type, not after the identifier of a declaration. *)
         ]) <?> "typ"
-
       let decl = lift2 Tuple2.make typ identifier <?> "decl"
       let unop  = from char ['-', Neg; '!', Not] <?> "unop"
       let binop = from string [
@@ -144,8 +149,6 @@ module C = struct
             binop >>= (fun op -> expr >>= (fun e2 -> ff (fun e1 -> Binop (op, e1, e2))));
             parens (sep_by (char ',') expr) >>= (fun args -> ff (fun f -> Call (f, args)));
           ])) <?> "expr"
-      (* can't use let rec here... *)
-      let tie f g = fix (fun f' -> f (g f')), fix (fun g' -> g (f g'))
       let lval, expr = tie lval expr
       let stmt = fix (fun stmt ->
           choice [
@@ -164,36 +167,13 @@ module C = struct
             string "while" *> parens expr >>= (fun e -> stmt >>| fun s -> While (e, s));
             string "for" *> parens (lift3 Tuple3.make (expr<*char ';') (expr<*char ';') expr) >>= (fun (e1,e2,e3) -> stmt >>| fun s -> For(e1,e2,e3,s));
           ]) <?> "stmt"
-
       let gdecl =
         let global = decl <* char ';' >>| fun d -> Global d in
         let fundef = typ >>= fun t -> identifier >>= fun name -> parens (sep_by (char ',') decl) >>= fun args -> curly (many stmt) >>| fun ss -> FunDef (t, name, args, ss) in
         global <|> fundef
-
       let ast = many gdecl
-
-      let parse p input = match parse_only p (`String input) with
-        | Ok v      -> v
-        | Error msg -> failwith msg
-
-      let test () =
-        let test name p show inputs =
-          print_endline ("Parser " ^ name ^ ":");
-          let no_path s = String.nreplace s "Codegen.C.Language." "" in
-          List.iter (fun input -> print_endline (input ^ " -> " ^ try no_path (show (parse p input)) with Failure s -> "fail:" ^ s)) inputs;
-          print_endline ""
-        in
-        test "int" int string_of_int ["123"; " 123 "; "abc"; "0123"; "0xFF"];
-        test "identifier" identifier identity ["abc"; " _abc "; "a b"; "a1"; "1a"; "a1b2c3"];
-        test "typ" typ show_typ ["int foo"; "int * foo"; "int ** foo"; "int[13]"; "int [ 2 ] "];
-        test "lval" lval show_lval ["foo"; "*foo"; "foo.bar"; "foo[13]"; "*foo.bar[13]"];
-        test "expr" expr show_expr ["13"; "(12)"; "foo"; "&*foo.bar[2]"; "1+2"; "1+2*3+4"; "foo = bar"; "f()"; "f(a, 2)"];
-        test "stmt" stmt show_stmt [" ;"; "13;"; "break;"; "return;"; "return 1+2;"; "{}"; "{ ; }"; "{;;}"; "{1;2;}"; "if ( 1 < 2 ) 3;"; "if ( 1 < 2 ) 3; else { 4*5; 6; }"; "while (1) { 2; }"; "for(i=0; i<3; i=i+1){ 4; }"; "int foo;"; "int[5] a;"];
-        test "stmt" stmt show_stmt [" ;"; "13;"; "break;"; "return;"; "return 1+2;"; "{}"; "{ ; }"; "{;;}"; "{1;2;}"; "if ( 1 < 2 ) 3;"; "if ( 1 < 2 ) 3; else { 4*5; 6; }"; "while (1) { 2; }"; "for(i=0; i<3; i=i+1){ 4; }"; "int foo;"; "int[5] a;"];
-        test "ast" ast show_ast ["int a; int f(int x, int* y){ int c; return a;} int* g(){{}} int b;"];
     end
-    let parse = Parser.(parse ast)
-    (* let () = Parser.test () *)
+    let parse = Parsers.parse Parser.ast
   end
 
   module Machine = struct
@@ -220,7 +200,7 @@ module C = struct
     and label = string
     [@@deriving show]
 
-    (* pulled out of Type since we don't to bother with rec. modules (needed in Environment) *)
+    (* pulled out of Type since we don't want to bother with rec. modules (needed in Environment) *)
     let rec size_of_type = let open Language in function
       | Int | Ptr _ | Arr _ | Fun _ (* ? *) -> 1
       | Struct (_, fields) -> List.(sum (map (size_of_type % fst) fields))
@@ -351,21 +331,6 @@ module C = struct
             codeS_fold (rho, a @ [Label ("_"^name)]) ss
       ) (E.empty, [])
   end
-  let test file =
-    let path = "tests/"^file in
-    let input = input_file path in
-    print_endline @@ "# Input ("^path^"):";
-    print_endline input;
-    print_endline "# AST:";
-    let ast = Language.parse input in
-    print_endline (Language.show_ast ast);
-    print_endline "\n# Machine instructions:";
-    let rho,is = Machine.code ast in
-    List.iter (print_endline % Machine.show_instr) is;
-    print_endline ""
-  let () =
-    test "empty.c";
-    test "array.c";
 end
 
 (* functional: PuF / MaMa *)
