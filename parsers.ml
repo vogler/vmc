@@ -37,6 +37,5 @@ let parse p input = match parse_only p (`String input) with
 
 let test name p show inputs =
   print_endline ("Parser " ^ name ^ ":");
-  let no_path s = String.nreplace s "Vmc.C.Language." "" in
-  List.iter (fun input -> print_endline (input ^ " -> " ^ try no_path (show (parse p input)) with Failure s -> "fail:" ^ s)) inputs;
+  List.iter (fun input -> print_endline (input ^ " -> " ^ try show (parse p input) with Failure s -> "fail:" ^ s)) inputs;
   print_endline ""

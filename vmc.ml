@@ -61,8 +61,7 @@ module C = struct
       | DoWhile    of stmt * expr
       | For        of expr * expr * expr * stmt (* initial declaration is syntax introduced with C99 *)
       | Return     of expr option
-    [@@deriving show] (* (show, mapper, folder) *)
-    (* [@@deriving show {with_path = false}] *)
+    [@@deriving show {with_path = false}] (* (show, mapper, folder) *)
 
     module Parser = struct
       include Parsers
@@ -154,7 +153,7 @@ module C = struct
       | Loadcl of label (* used instead of Loadc for functions since we want to see the label instead of some number *)
     and const = int
     and label = string
-    [@@deriving show]
+    [@@deriving show {with_path = false}]
 
     (* pulled out of Type since we don't want to bother with rec. modules (needed in Environment) *)
     let rec size_of_type = let open Language in function
