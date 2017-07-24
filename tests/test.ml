@@ -3,6 +3,7 @@ open Batteries
 module C = struct
   module Language = Vmc.C.Language
   module Machine = Vmc.C.Machine
+
   let parse () =
     let open Language in
     let open Language.Parser in
