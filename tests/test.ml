@@ -26,8 +26,8 @@ module C = struct
       let ast = Language.parse input in
       print_endline (Language.show_ast ast);
       print_endline "\n# Machine instructions:";
-      let rho,is = Machine.code ast in
-      List.iter (print_endline % Machine.show_instr) is;
+      let is = Machine.code ast in
+      List.iter (print_endline % Machine.show_instr') is;
       print_endline ""
     in
     test "empty.c";

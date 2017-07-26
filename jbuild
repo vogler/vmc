@@ -3,7 +3,8 @@
 (executable
  ((name vmc)
   (libraries (batteries angstrom))
-  (preprocess (pps (ppx_deriving))) ; opam pin add ppx_deriving https://github.com/diml/ppx_deriving.git\#restore-compat+omp-driver-integration
+  (preprocess (pps (ppx_deriving ))) ; opam pin add ppx_deriving https://github.com/diml/ppx_deriving.git\#restore-compat+omp-driver-integration
+  ; ppx_deriving_morphism only works with ocamlbuild
  ))
 
 ; (executable

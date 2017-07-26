@@ -1,4 +1,9 @@
 open Batteries
+module List = struct
+  include List
+  let flat_map f xs = flatten (map f xs)
+  let sum xs = if xs=[] then 0 else sum xs
+end
 
 (* signature for a language together with its abstract machine *)
 module type S = sig
@@ -154,10 +159,15 @@ module C = struct
     and const = int
     and label = string
     [@@deriving show {with_path = false}]
+    let show_instr' = function
+      | Label l -> l^":"
+      | Loadcl l -> "loadc "^l
+      | x -> show_instr x |> String.filter (function '('|')' -> false | _ -> true) |> String.lowercase
 
     (* pulled out of Type since we don't want to bother with rec. modules (needed in Environment) *)
     let rec size_of_type = let open Language in function
-      | Int | Ptr _ | Arr _ | Fun _ (* ? *) -> 1
+      | Int | Ptr _ | Fun _ (* ? *) -> 1
+      | Arr (n,t) -> n * size_of_type t
       | Struct (_, fields) -> List.(sum (map (size_of_type % fst) fields))
 
     module Environment = struct
@@ -280,11 +290,32 @@ module C = struct
       | s -> rho, codeS' rho s
     and codeS_fold (rho,a) ss = List.fold_left (fun (rho,a) s -> let rho', i = codeS rho s in rho', a @ i) (rho,a) ss
 
-    let code = List.fold_left (fun (rho, a) -> function
-        | L.Global d -> E.(decl Global d rho), a
-        | L.FunDef (t, name, args, ss) ->
-            codeS_fold (rho, a @ [Label ("_"^name)]) ss
-      ) (E.empty, [])
+    let codeG (rho, a) = function
+      | L.Global d -> E.(decl Global d rho), a
+      | L.FunDef (t, name, args, ss) ->
+          (* let types_of_stmt s = let f = L.identity_folder in f.fold_stmt { f with dispatch_stmt = { f.dispatch_stmt with fold_Local = fun _ (t,_) a -> t::a } } s [] in *)
+          let rec types_of_stmt = function L.Local (t,_) -> [t] | L.Block ss -> List.flat_map types_of_stmt ss | _ -> [] in
+          let k = List.sum @@ List.map Type.size_of @@ List.flat_map types_of_stmt ss in
+          let rho', is = codeS_fold (rho, []) ss in
+          let sp_max =
+            let sp_change = function
+              | Neg | Not | Load | Jump _ | Halt | New | Call | Enter _ | Return | Storea _ | Storer _ | Label _ -> 0
+              | Loadc _ | Loada _ | Loadrc _ | Loadr _ | Loadcl _ | Dup -> 1
+              | Add | Sub | Mul | Div | Mod | And | Or | Eq | Neq | Leq | Le | Geq | Gr | Store | Pop | Jumpz _ -> (-1)
+              | Mark -> 2
+              | Alloc k -> k
+              | Slide k -> -k
+              | Move k -> k-1
+            in
+            List.sum @@ List.map sp_change is
+          in
+          let q = k + sp_max in
+          rho', a @ [Label ("_"^name); Enter q; Alloc k] @ is @ [Return]
+
+    let code ast =
+      let k = List.sum @@ List.filter_map (function L.Global (t,_) -> Some (Type.size_of t) | _ -> None) ast in
+      [Enter (k+4); Alloc (k+1); Mark; Loadcl "_main"; Call; Slide k; Halt] @
+      snd @@ List.fold_left codeG (E.empty, []) ast
   end
 end
 
