@@ -27,7 +27,7 @@ module C = struct
       print_endline (Language.show_ast ast);
       print_endline "\n# Machine instructions:";
       let is = Machine.code ast in
-      List.iter (print_endline % Machine.show_instr') is;
+      List.iter (print_endline % Machine.show_instr) is;
       print_endline ""
     in
     test "empty.c";

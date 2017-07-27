@@ -1,0 +1,14 @@
+enter 4
+alloc 1
+mark
+loadc _main
+call
+slide 0
+halt
+_main:
+enter 1
+alloc 0
+loadc 0
+storer -3
+return
+return

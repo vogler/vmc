@@ -1,14 +1,22 @@
-# all:
-# 	ocamlbuild -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native && ./vmc.native
+build:
+	jbuilder build vmc.exe
+	cp _build/default/vmc.exe vmc
 
-all:
-	jbuilder build vmc.exe && ./_build/default/vmc.exe
+# run:
+	# jbuilder exec vmc # why doesn't this work?
 
-test:
-	# jbuilder runtest
-	# TODO jbuild for test
-	ocamlbuild -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && ./test.native
+test: # regression tests
+	jbuilder runtest
+
+unit: # debug/unit tests
+	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && ./_build/tests/test.native
+
+ocamlbuild: # just here for comparison
+	ocamlbuild -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native
 
 clean:
 	jbuilder clean
 	ocamlbuild -clean
+	rm -f vmc
+
+.PHONY: build test unit ocamlbuild clean

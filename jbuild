@@ -2,18 +2,10 @@
 
 (executable
  ((name vmc)
+  (public_name vmc)
   (libraries (batteries angstrom))
-  (preprocess (pps (ppx_deriving ))) ; opam pin add ppx_deriving https://github.com/diml/ppx_deriving.git\#restore-compat+omp-driver-integration
+  (preprocess (pps (ppx_deriving.std))) ; opam pin add ppx_deriving https://github.com/diml/ppx_deriving.git\#restore-compat+omp-driver-integration
   ; ppx_deriving_morphism only works with ocamlbuild
  ))
 
-; (executable
-;  ((name tests/test)
-;   (libraries (batteries angstrom))
-;   (preprocess (pps (ppx_deriving)))
-;  ))
-;
-; (alias
-;  ((name    runtest)
-;   (deps    (test.exe))
-;   (action  (run ${<}))))
+; https://github.com/janestreet/jbuilder/tree/master/example/sample-projects/hello_world

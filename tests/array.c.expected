@@ -1,0 +1,48 @@
+enter 9
+alloc 6
+mark
+loadc _main
+call
+slide 5
+halt
+_main:
+enter 4
+alloc 0
+loadc 2
+loadc 1
+loadc 0
+loadc 1
+mul
+add
+store
+loadc 1
+loadc 3
+add
+load
+loadc 1
+loadc 1
+loadc 1
+mul
+add
+store
+loadc 1
+loadc 1
+add
+loadc 4
+add
+load
+loadc 1
+loadc 2
+loadc 1
+mul
+add
+store
+loadc 1
+loadc 2
+loadc 1
+mul
+add
+load
+storer -3
+return
+return
