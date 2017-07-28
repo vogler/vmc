@@ -1,12 +1,9 @@
 open Batteries
 
 module C = struct
-  module Language = Vmc.C.Language
-  module Machine = Vmc.C.Machine
-
   let parse () =
-    let open Language in
-    let open Language.Parser in
+    let open C.Language in
+    let open C.Language.Parser in
     test "int" int string_of_int ["123"; " 123 "; "abc"; "0123"; "0xFF"];
     test "identifier" identifier identity ["abc"; " _abc "; "a b"; "a1"; "1a"; "a1b2c3"];
     test "typ" typ show_typ ["int foo"; "int * foo"; "int ** foo"; "int[13]"; "int [ 2 ] "];
@@ -23,11 +20,11 @@ module C = struct
       print_endline @@ "# Input ("^path^"):";
       print_endline input;
       print_endline "# AST:";
-      let ast = Language.parse input in
-      print_endline (Language.show_ast ast);
+      let ast = C.Language.parse input in
+      print_endline (C.Language.show_ast ast);
       print_endline "\n# Machine instructions:";
-      let is = Machine.code ast in
-      List.iter (print_endline % Machine.show_instr) is;
+      let is = C.Machine.code ast in
+      List.iter (print_endline % C.Machine.show_instr) is;
       print_endline ""
     in
     test "empty.c";
