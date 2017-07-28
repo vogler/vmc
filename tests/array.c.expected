@@ -15,28 +15,31 @@ loadc 1
 mul
 add
 store
+pop
 loadc 1
+load
 loadc 3
 add
-load
 loadc 1
 loadc 1
 loadc 1
 mul
 add
 store
+pop
 loadc 1
 loadc 1
-add
-loadc 4
 add
 load
+loadc 4
+add
 loadc 1
 loadc 2
 loadc 1
 mul
 add
 store
+pop
 loadc 1
 loadc 2
 loadc 1

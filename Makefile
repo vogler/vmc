@@ -1,22 +1,25 @@
 build:
-	jbuilder build vmc.exe
+	jbuilder build vmc.exe && \
 	cp _build/default/vmc.exe vmc
 
-# run:
-	# jbuilder exec vmc # why doesn't this work?
+run:
+	jbuilder build @install && \
+	jbuilder exec vmc
 
 test: # regression tests
 	jbuilder runtest
 
 unit: # debug/unit tests
-	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && ./_build/tests/test.native
+	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && \
+	./_build/tests/test.native
 
 ocamlbuild: # just here for comparison
-	ocamlbuild -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native
+	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native && \
+	cp _build/vmc.native vmc
 
 clean:
 	jbuilder clean
 	ocamlbuild -clean
 	rm -f vmc
 
-.PHONY: build test unit ocamlbuild clean
+.PHONY: build run test unit ocamlbuild clean

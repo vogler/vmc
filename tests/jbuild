@@ -16,6 +16,6 @@
 
 (alias
  ((name runtest)
-  (action (run diff -u ${path:empty.c.expected} ${path:empty.c.output}))
-  (action (run diff -u ${path:array.c.expected} ${path:array.c.output}))
+  (action (run diff -u --color=always ${path:empty.c.expected} ${path:empty.c.output}))
+  (action (run diff -u --color=always ${path:array.c.expected} ${path:array.c.output}))
  ))

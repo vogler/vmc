@@ -1,8 +1,9 @@
 open Batteries
-module List = struct
+module List = struct (* fix some annoying stuff... *)
   include List
   let flat_map f xs = flatten (map f xs)
   let sum xs = if xs=[] then 0 else sum xs
+  let rec inits = function [] -> [[]] | x::xs -> [] :: map (cons x) (inits xs)
 end
 
 (* signature for a language together with its abstract machine *)
@@ -196,7 +197,7 @@ module C = struct
       (* we can statically determine the type and therefore size of every expression *)
       let rec of_expr rho = function
         | Binop (Comma, e1, e2) -> of_expr rho e2 (* mh, ugly *)
-        | Const _ | Unop _ | Binop _ -> Int
+        | Const _ | Unop _ | Binop _ -> Int (* TODO whay about pointers? *)
         | Lval l -> of_lval rho l
         | Addr l -> Ptr (of_lval rho l)
         | Asn (l, e) -> of_expr rho e
@@ -239,8 +240,10 @@ module C = struct
       | L.Binop (op, e1, e2) -> codeR rho e1 @ codeR rho e2 @ [binop op]
       | L.Asn (l, e) -> codeR rho e @ codeL rho l @ [Store]
       | L.Call (f, args) -> (* TODO malloc and other built-ins? *)
-          let m = List.(sum (map (Type.size_of_expr rho) args)) in
-          List.(concat (rev_map (codeR rho) args))
+          (* different from slides: Since we reuse the argument cells for return, we need to make sure that there are enough. TODO For now, we only support returning values of size 1... *)
+          let m = max 1 List.(sum (map (Type.size_of_expr rho) args)) in
+          (* we wouldn't need the alloc 1 if f didn't return anything, but we can't say since it's an expr... *)
+          if args=[] then [Alloc 1] else List.(concat (rev_map (codeR rho) args))
           @ [Mark]
           @ codeR rho f
           @ [Call]
@@ -260,7 +263,7 @@ module C = struct
       | L.Nop -> []
       | L.Continue -> [Jump (E.find "continue" rho.E.label)]
       | L.Break -> [Jump (E.find "break" rho.E.label)]
-      | L.Expr e -> codeR rho e
+      | L.Expr e -> codeR rho e @ [Pop] (* TODO pop n, where n = Type.size_of_expr e, if we want to support returning structs *)
       | L.Block ss -> snd (codeS_fold (rho, []) ss)
       | L.Return None -> [Return]
       | L.Return (Some e) -> codeR rho e @ [Storer (-3); Return]
@@ -309,7 +312,8 @@ module C = struct
               | Slide k -> -k
               | Move k -> k-1
             in
-            List.sum @@ List.map sp_change is
+            (* List.(inits is |> map (sum % map sp_change) |> max) *)
+            fst @@ List.fold_left (fun (m,a) i -> let r = a + (sp_change i) in max m r, r) (0, 0) is
           in
           let q = k + sp_max in
           rho', a @ [Label ("_"^name); Enter q; Alloc k] @ is @ [Return]
