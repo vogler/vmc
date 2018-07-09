@@ -56,6 +56,7 @@ module Language = struct
       (fun ff -> choice [
         char '*' *> ff (fun t -> Ptr t);
         brackets int >>= (fun n -> ff (fun t -> Arr (n, t))); (* TODO array size optional if used with initializer. also, we expect the brackets after the type, not after the identifier of a declaration. *)
+        (* string "struct" *> identifier >>= (fun name -> curly (sep_by (char ';') decl) <* char ';' >>| fun fields -> Struct (name, fields)) *)
       ]) <?> "typ"
     let decl = lift2 Tuple2.make typ identifier <?> "decl"
     let unop  = from char ['-', Neg; '!', Not] <?> "unop"
@@ -90,6 +91,30 @@ module Language = struct
           binop >>= (fun op -> expr >>= (fun e2 -> ff (fun e1 -> Binop (op, e1, e2))));
           parens (sep_by (char ',') expr) >>= (fun args -> ff (fun f -> Call (f, args)));
         ])) <?> "expr"
+
+    let unop ops = from string ops >>| fun op e -> Unop (op, e)
+    let binop ops = from string ops >>| fun op e1 e2 -> Binop (op, e1, e2)
+    let expr lval = fix (fun expr ->
+      choice [
+        parens expr;
+        int >>| (fun i -> Const i);
+        lval >>= (function Deref e -> fail "" | l -> return (Lval l)); (* Deref has lower precedence than Field and Index, so we need to handle it later... *)
+      ]
+      |> chain (fun lp _ -> lp >>= fun fe -> parens (sep_by (char ',') expr) >>| (fun args -> Call (fe, args)))
+      |> chain (fun lp _ -> choice [ (* this needs to be chainr *)
+            unop ["-", Neg; "!", Not] <*> lp;
+            char '&' *> lval >>| (fun l -> Addr l);
+            char '*' *> lp >>| (fun e -> Lval (Deref e));
+          ])
+      |> chainl (binop ["*", Mul; "/", Div; "%", Mod])
+      |> chainl (binop ["+", Add; "-", Sub])
+      |> chainl (binop ["<=", Leq; "<", Le; ">=", Geq; ">", Gr])
+      |> chainl (binop ["==", Eq; "!=", Neq])
+      |> chainl (binop ["&&", And])
+      |> chainl (binop ["||", Or])
+      |> chain (fun _ self -> lval >>= fun l -> char '=' *> self >>| fun e -> Asn (l, e)) (* TODO use lp and fail if not Lval since lval parser has wrong precedence for Deref... *)
+    ) <?> "expr"
+
     let lval, expr = tie lval expr
     let stmt = fix (fun stmt ->
         choice [
@@ -114,7 +139,7 @@ module Language = struct
       global <|> fundef
     let ast = many gdecl
   end
-  let parse = Parsers.parse Parser.ast
+  let parse = Parsers.parse_exc Parser.ast
 end
 
 module Machine = struct
