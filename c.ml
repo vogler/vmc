@@ -233,7 +233,7 @@ module Machine = struct
   let unop = function
     | L.Neg -> Neg | L.Not -> Not
   let binop = function
-    | L.Add -> Add | L.Sub -> Sub | L.Mul -> Mul | L.Div -> Div | L.Mod -> Mod | L.And -> And | L.Or -> Or | L.Eq -> Eq | L.Neq -> Neq | L.Leq -> Leq | L.Le -> Le | L.Geq -> Geq | L.Gr -> Gr | L.Comma -> Slide 1
+    | L.Add -> Add | L.Sub -> Sub | L.Mul -> Mul | L.Div -> Div | L.Mod -> Mod | L.And -> And | L.Or -> Or | L.Eq -> Eq | L.Neq -> Neq | L.Leq -> Leq | L.Le -> Le | L.Geq -> Geq | L.Gr -> Gr | L.Comma -> Slide 1 (* TODO size of e2 *)
 
   let rec codeR rho = function
     | L.Const q -> [Loadc q]
