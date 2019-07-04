@@ -1,0 +1,10 @@
+(executable
+ (name vmc)
+ (public_name vmc)
+ (libraries batteries angstrom)
+ (preprocess
+  (pps ppx_deriving.std))
+ ; ppx_deriving_morphism only works with ocamlbuild
+ )
+
+; https://github.com/janestreet/jbuilder/tree/master/example/sample-projects/hello_world
