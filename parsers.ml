@@ -48,7 +48,7 @@ let chainr op lp = (* right-associative binop *)
 (* can't use let rec here... *)
 let tie f g = fix (fun f' -> f (g f')), fix (fun g' -> g (f g'))
 
-let parse p input = parse_only p (`String input)
+let parse p input = parse_string p input
 let parse_exc p input = match parse p input with
   | Ok v      -> v
   | Error msg -> failwith msg
