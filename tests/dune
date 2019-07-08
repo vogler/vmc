@@ -24,5 +24,5 @@
  (name runtest)
  (action
   (progn
-    (run diff -u --color=always %{dep:empty.c.expected} %{dep:empty.c.output})
-    (run diff -u --color=always %{dep:array.c.expected} %{dep:array.c.output}))))
+    (diff %{dep:empty.c.expected} %{dep:empty.c.output})
+    (diff %{dep:array.c.expected} %{dep:array.c.output}))))
