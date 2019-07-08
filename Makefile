@@ -7,7 +7,7 @@ run:
 	jbuilder exec vmc
 
 test: # regression tests
-	jbuilder runtest
+	jbuilder runtest --diff-command='diff -u10 --color=always'
 
 unit: # debug/unit tests
 	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && \
