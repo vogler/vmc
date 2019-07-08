@@ -1,5 +1,4 @@
-; https://github.com/janestreet/jbuilder/tree/master/example/sample-projects/hello_world/test
-; https://jbuilder.readthedocs.io/en/latest/jbuild.html#rule
+; https://dune.readthedocs.io/en/stable/dune-files.html#rule
 ; Note that contrary to makefiles or other build systems, user rules currently don’t support patterns, such as a rule to produce %.y from %.x for any given %. This might be supported in the future.
 
 (rule

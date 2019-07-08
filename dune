@@ -7,4 +7,4 @@
  ; ppx_deriving_morphism only works with ocamlbuild
  )
 
-; https://github.com/janestreet/jbuilder/tree/master/example/sample-projects/hello_world
+; https://github.com/ocaml/dune/tree/master/example/sample-projects/hello_world
