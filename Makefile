@@ -3,7 +3,6 @@ build:
 	cp _build/default/vmc.exe vmc
 
 run:
-	dune build @install && \
 	dune exec vmc
 
 test: # regression tests
