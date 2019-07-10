@@ -72,7 +72,7 @@ let test name p show tests_ok tests_fail =
         print_endline @@ " -> expected fail, but got " ^ show a
     | Error msg, Some b ->
         print_endline @@ " -> expected " ^ show b ^ ", but parser failed with " ^ msg
-    | Error msg, None ->
+    | Error _, None ->
         incr passed;
         clear_line ()
   in

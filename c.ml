@@ -74,7 +74,7 @@ module Language = struct
         char '.' *> identifier >>= (fun field -> ff (fun l -> Field (l, field)));
         brackets expr >>= (fun index -> ff (fun l -> Index (l, index)));
       ]) <?> "lval"
-    let expr lval = fix (fun expr -> lrec
+    let _expr lval = fix (fun expr -> lrec
         (choice [
           int >>| (fun i -> Const i);
           parens expr;
@@ -98,7 +98,7 @@ module Language = struct
       choice [
         parens expr;
         int >>| (fun i -> Const i);
-        lval >>= (function Deref e -> fail "" | l -> return (Lval l)); (* Deref has lower precedence than Field and Index, so we need to handle it later... *)
+        lval >>= (function Deref _ -> fail "" | l -> return (Lval l)); (* Deref has lower precedence than Field and Index, so we need to handle it later... *)
       ]
       |> chain (fun lp _ -> lp >>= fun fe -> parens (sep_by (char ',') expr) >>| (fun args -> Call (fe, args)))
       |> chain (fun lp _ -> choice [ (* this needs to be chainr *)
@@ -199,11 +199,11 @@ module Machine = struct
     open Language
     (* we can statically determine the type and therefore size of every expression *)
     let rec of_expr rho = function
-      | Binop (Comma, e1, e2) -> of_expr rho e2 (* mh, ugly *)
+      | Binop (Comma, _, e2) -> of_expr rho e2 (* mh, ugly *)
       | Const _ | Unop _ | Binop _ -> Int (* TODO whay about pointers? *)
       | Lval l -> of_lval rho l
       | Addr l -> Ptr (of_lval rho l)
-      | Asn (l, e) -> of_expr rho e
+      | Asn (_, e) -> of_expr rho e
       | Call (f, _) ->
           (match of_expr rho f with
           | Fun (tr, _) -> tr
@@ -215,7 +215,7 @@ module Machine = struct
           (match of_lval rho l with
           | Struct (_, fields) -> List.assoc_inv o fields
           | _ -> failwith "Type error")
-      | Index (l, o) ->
+      | Index (l, _) ->
           (match of_lval rho l with
           | Arr (_, t) -> t
           | _ -> failwith "Type error")
@@ -300,7 +300,7 @@ module Machine = struct
 
   let codeG (rho, a) = function
     | L.Global d -> E.(decl Global d rho), a
-    | L.FunDef (t, name, args, ss) ->
+    | L.FunDef (_, name, _, ss) ->
         (* let types_of_stmt s = let f = L.identity_folder in f.fold_stmt { f with dispatch_stmt = { f.dispatch_stmt with fold_Local = fun _ (t,_) a -> t::a } } s [] in *)
         let rec types_of_stmt = function L.Local (t,_) -> [t] | L.Block ss -> List.flat_map types_of_stmt ss | _ -> [] in
         let k = List.sum @@ List.map Type.size_of @@ List.flat_map types_of_stmt ss in
