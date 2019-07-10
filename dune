@@ -1,3 +1,4 @@
+; https://github.com/ocaml/dune/tree/master/example/sample-projects/hello_world
 (executable
  (name vmc)
  (public_name vmc)
@@ -7,4 +8,7 @@
  ; ppx_deriving_morphism only works with ocamlbuild
  )
 
-; https://github.com/ocaml/dune/tree/master/example/sample-projects/hello_world
+; https://dune.readthedocs.io/en/stable/faq.html#how-to-make-warnings-non-fatal
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
