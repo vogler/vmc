@@ -6,7 +6,7 @@ run:
 	dune exec vmc
 
 test: # regression tests
-	dune runtest --diff-command='diff -u10 --color=always'
+	dune runtest --diff-command='diff -u10 --color=always' # --diff-command can be removed once https://github.com/ocaml/dune/pull/2391 lands in opam
 
 unit: # debug/unit tests
 	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && \
