@@ -16,6 +16,9 @@ ocamlbuild: # just here for comparison
 	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native && \
 	cp _build/vmc.native vmc
 
+fmt:
+	dune build @fmt --auto-promote
+
 clean:
 	dune clean
 	ocamlbuild -clean
