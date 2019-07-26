@@ -188,7 +188,7 @@ module Machine = struct
     }
     let empty = { var = Map.empty; field = Map.empty; label = Map.empty; addr = 1 }
     let find = Map.find
-    let type_of x rho = Tuple3.third (find x rho.var)
+    let type_of x rho = Tuple3.third (try find x rho.var with Not_found -> failwith ("type_of "^x^" not found"))
     let decl scope (typ, name) rho =
       { rho with var = Map.add name (scope, rho.addr, typ) rho.var; addr = rho.addr + size_of_type typ }
     let add_label k v rho = { rho with label = Map.add k v rho.label }
@@ -300,11 +300,16 @@ module Machine = struct
 
   let codeG (rho, a) = function
     | L.Global d -> E.(decl Global d rho), a
-    | L.FunDef (_, name, _, ss) ->
+    | L.FunDef (t, name, args, ss) ->
+        (* put function in rho *)
+        let rho = E.(decl Global (L.Fun (t, List.map fst args), name)) rho in
+        (* put arguments in rho *)
+        let rho = List.fold_right E.(decl Local) args rho in
         (* let types_of_stmt s = let f = L.identity_folder in f.fold_stmt { f with dispatch_stmt = { f.dispatch_stmt with fold_Local = fun _ (t,_) a -> t::a } } s [] in *)
         let rec types_of_stmt = function L.Local (t,_) -> [t] | L.Block ss -> List.flat_map types_of_stmt ss | _ -> [] in
         let k = List.sum @@ List.map Type.size_of @@ List.flat_map types_of_stmt ss in
-        let rho', is = codeS_fold (rho, []) ss in
+        (* update rho and generate instructions for the statements *)
+        let rho, is = codeS_fold (rho, []) ss in
         let sp_max =
           let sp_change = function
             | Neg | Not | Load | Jump _ | Halt | New | Call | Enter _ | Return | Storea _ | Storer _ | Label _ -> 0
@@ -319,7 +324,7 @@ module Machine = struct
           fst @@ List.fold_left (fun (m,a) i -> let r = a + (sp_change i) in max m r, r) (0, 0) is
         in
         let q = k + sp_max in
-        rho', a @ [Label ("_"^name); Enter q; Alloc k] @ is @ [Return]
+        rho, a @ [Label ("_"^name); Enter q; Alloc k] @ is @ [Return]
 
   let code ast =
     let k = List.sum @@ List.filter_map (function L.Global (t,_) -> Some (Type.size_of t) | _ -> None) ast in
