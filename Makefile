@@ -9,8 +9,8 @@ test: # regression tests
 	dune runtest --diff-command='diff -u10 --color=always' # --diff-command can be removed once https://github.com/ocaml/dune/pull/2391 lands in opam
 
 unit: # debug/unit tests
-	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom tests/test.native && \
-	./_build/tests/test.native
+	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom unit_tests.native && \
+	./_build/unit_tests.native
 
 ocamlbuild: # just here for comparison
 	ocamlbuild -no-links -use-ocamlfind -package batteries -package ppx_deriving.std -package angstrom vmc.native && \
