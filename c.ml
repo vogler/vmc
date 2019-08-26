@@ -312,9 +312,10 @@ module Machine = struct
         let rho, is = codeS_fold (rho, []) ss in
         let sp_max =
           let sp_change = function
-            | Neg | Not | Load | Jump _ | Halt | New | Call | Enter _ | Return | Storea _ | Storer _ | Label _ -> 0
+            | Neg | Not | Load | Jump _ | Halt | New | Enter _ | Return | Storea _ | Storer _ | Label _ -> 0
             | Loadc _ | Loada _ | Loadrc _ | Loadr _ | Loadcl _ | Dup -> 1
             | Add | Sub | Mul | Div | Mod | And | Or | Eq | Neq | Leq | Le | Geq | Gr | Store | Pop | Jumpz _ -> (-1)
+            | Call -> (-3)
             | Mark -> 2
             | Alloc k -> k
             | Slide k -> -k
